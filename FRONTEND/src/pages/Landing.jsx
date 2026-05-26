@@ -69,8 +69,7 @@ export default function Landing() {
       <div className="bg-glow" />
 
       <div className="landing-content">
-        <div className="badge">Powered by Blockchain</div>
-
+  
         <h1 className="landing-title">
           Decentralized Voting<br />
           <span className="gradient-text">System</span>
