@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ethers } from "ethers";
 import { VOTING_CONTRACT_ADDRESS, BUDGET_CONTRACT_ADDRESS } from "../contracts/contractConfig";
 import { votingABI } from "../contracts/votingABI";
-import { budgetABI } from "../contracts/budgetABI";
+import { budgetABI } from "../contracts/BudgetABI";
 import "../styles/Admin.css";
 
 const PINATA_API_KEY = "8a0487ef669e51109be9";
