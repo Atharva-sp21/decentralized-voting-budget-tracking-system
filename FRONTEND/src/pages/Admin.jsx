@@ -95,8 +95,7 @@ export default function Admin() {
       }
       setCandidates(list);
 
-      const pending = await votingContract.getPendingVoters();
-      setPendingVoters(pending);
+      await refreshPendingVoters(votingContract);
 
       const budgetContract = new ethers.Contract(BUDGET_CONTRACT_ADDRESS, budgetABI, prov);
       const bal = await budgetContract.getBalance();
@@ -111,6 +110,19 @@ export default function Admin() {
       setProjects(projList);
     } catch (err) {
       console.error("Failed to load data:", err);
+    }
+  }
+
+  // ✅ FIX: dedicated function to refresh pending voters list
+  async function refreshPendingVoters(votingContractInstance) {
+    try {
+      // if no contract instance passed in, create a fresh one
+      const prov = new ethers.providers.Web3Provider(window.ethereum);
+      const vc = votingContractInstance || new ethers.Contract(VOTING_CONTRACT_ADDRESS, votingABI, prov);
+      const pending = await vc.getPendingVoters();
+      setPendingVoters(pending);
+    } catch (err) {
+      console.error("Failed to refresh pending voters:", err);
     }
   }
 
@@ -164,9 +176,8 @@ export default function Admin() {
       const tx = await contract.approveVoter(address);
       await tx.wait();
       showStatus("Voter approved!");
-      const prov = new ethers.providers.Web3Provider(window.ethereum);
-      const vc = new ethers.Contract(VOTING_CONTRACT_ADDRESS, votingABI, prov);
-      await loadData(prov, vc);
+      // ✅ FIX: refresh pending list immediately after approval
+      await refreshPendingVoters();
     } catch (err) {
       console.error(err); showStatus("Failed to approve voter.", "#f87171");
     } finally { setApprovingVoter(""); }
@@ -179,9 +190,8 @@ export default function Admin() {
       const tx = await contract.rejectVoter(address);
       await tx.wait();
       showStatus("Voter rejected.");
-      const prov = new ethers.providers.Web3Provider(window.ethereum);
-      const vc = new ethers.Contract(VOTING_CONTRACT_ADDRESS, votingABI, prov);
-      await loadData(prov, vc);
+      // ✅ FIX: refresh pending list immediately after rejection
+      await refreshPendingVoters();
     } catch (err) {
       console.error(err); showStatus("Failed to reject voter.", "#f87171");
     }
@@ -192,6 +202,7 @@ export default function Admin() {
       showStatus("Enter a valid address.", "#f87171"); return;
     }
     await approveVoter(manualVoterAddress);
+    // ✅ FIX: clear the input field after approval
     setManualVoterAddress("");
   }
 

@@ -6,9 +6,8 @@
       "contentHash": "56312b7d1069752f2e28cf44cbad4d92",
       "sourceName": "contracts/Budget.sol",
       "solcConfig": {
-        "version": "0.8.28",
+        "version": "0.8.0",
         "settings": {
-          "evmVersion": "paris",
           "optimizer": {
             "enabled": false,
             "runs": 200
@@ -42,9 +41,8 @@
       "contentHash": "2ce0de5ecb8b3f9be64f82f72a18497c",
       "sourceName": "contracts/Voting.sol",
       "solcConfig": {
-        "version": "0.8.28",
+        "version": "0.8.0",
         "settings": {
-          "evmVersion": "paris",
           "optimizer": {
             "enabled": false,
             "runs": 200
