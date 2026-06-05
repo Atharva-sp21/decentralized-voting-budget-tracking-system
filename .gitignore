@@ -1,1 +1,28 @@
+# Dependencies
 backend/node_modules/
+FRONTEND/node_modules/
+node_modules/
+
+# Environment variables — NEVER commit these
+backend/.env
+backend/.env.local
+FRONTEND/.env
+FRONTEND/.env.local
+.env
+.env.local
+
+# Build outputs
+FRONTEND/dist/
+FRONTEND/dist-ssr/
+
+# Hardhat artifacts
+backend/artifacts/
+backend/cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
