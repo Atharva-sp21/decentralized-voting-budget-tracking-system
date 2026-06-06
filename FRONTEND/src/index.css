@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -5,15 +7,16 @@
 }
 
 :root {
-  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --display: 'Syne', system-ui, sans-serif;
   --mono: 'Courier New', ui-monospace, Consolas, monospace;
 
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.5;
   color-scheme: dark;
-  color: #e2e8f0;
-  background: #080c14;
+  color: #f0f4ff;
+  background: #05080f;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -22,8 +25,8 @@
 
 body {
   margin: 0;
-  background: #080c14;
-  color: #e2e8f0;
+  background: #05080f;
+  color: #f0f4ff;
   min-height: 100vh;
 }
 
@@ -35,20 +38,20 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--sans);
-  font-weight: 600;
-  color: #f1f5f9;
+  font-family: var(--display);
+  font-weight: 700;
+  color: #f0f4ff;
   letter-spacing: -0.02em;
 }
 
 p {
   margin: 0;
-  color: #94a3b8;
-  line-height: 1.6;
+  color: #8892a4;
+  line-height: 1.65;
 }
 
 a {
-  color: #6366f1;
+  color: #6c63ff;
   text-decoration: none;
 }
 
@@ -58,12 +61,12 @@ a:hover {
 
 code {
   font-family: var(--mono);
-  font-size: 0.85em;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  font-size: 0.82em;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 5px;
   padding: 2px 6px;
-  color: #94a3b8;
+  color: #8892a4;
 }
 
 button {
@@ -73,27 +76,42 @@ button {
 
 input, textarea, select {
   font-family: var(--sans);
+  color: #f0f4ff;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #6c63ff;
+}
+
+input[type="file"] {
+  color: #8892a4;
+  font-size: 0.85rem;
 }
 
 ::selection {
-  background: rgba(99, 102, 241, 0.3);
-  color: #f1f5f9;
+  background: rgba(108, 99, 255, 0.3);
+  color: #f0f4ff;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #080c14;
+  background: #05080f;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #1a2235;
   border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #243047;
 }

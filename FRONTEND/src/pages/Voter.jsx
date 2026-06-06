@@ -9,6 +9,14 @@ import "../styles/Voter.css";
 const PINATA_API_KEY = import.meta.env.VITE_PINATA_API_KEY;
 const PINATA_SECRET = import.meta.env.VITE_PINATA_SECRET;
 
+const TABS = [
+  { id: "vote",   label: "Cast Vote",      icon: "✓" },
+  { id: "budget", label: "Budget Tracker", icon: "◎" },
+];
+
+const STATUS_LABELS = ["Not Registered", "Pending Approval", "Approved", "Rejected"];
+const STATUS_COLORS = ["#475569", "#f59e0b", "#22c55e", "#ef4444"];
+
 export default function Voter() {
   const navigate = useNavigate();
   const [provider, setProvider] = useState(null);
@@ -17,7 +25,7 @@ export default function Voter() {
   const [fullAddress, setFullAddress] = useState("");
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
-  const [statusColor, setStatusColor] = useState("#6366f1");
+  const [statusType, setStatusType] = useState("info");
   const [activeTab, setActiveTab] = useState("vote");
 
   const [voterStatus, setVoterStatus] = useState(0);
@@ -37,7 +45,18 @@ export default function Voter() {
   const [budgetBalance, setBudgetBalance] = useState("0");
   const [phaseEvents, setPhaseEvents] = useState([]);
 
-  useEffect(() => { initWallet(); }, []);
+  useEffect(() => {
+    initWallet();
+    if (window.ethereum) {
+      const handler = () => { window.location.href = "/"; };
+      window.ethereum.on("accountsChanged", handler);
+      window.ethereum.on("chainChanged", handler);
+      return () => {
+        window.ethereum.removeListener("accountsChanged", handler);
+        window.ethereum.removeListener("chainChanged", handler);
+      };
+    }
+  }, []);
 
   async function initWallet() {
     if (!window.ethereum) { navigate("/"); return; }
@@ -77,12 +96,12 @@ export default function Voter() {
         setWinner({ name: w.name, photoCID: w.photoCID, voteCount: w.voteCount.toString() });
       }
       const count = await contract.candidatesCount();
-      const list = [];
       let total = 0;
       for (let i = 1; i <= count; i++) {
         const c = await contract.candidates(i);
         total += Number(c.voteCount);
       }
+      const list = [];
       for (let i = 1; i <= count; i++) {
         const c = await contract.candidates(i);
         list.push({
@@ -92,7 +111,7 @@ export default function Voter() {
         });
       }
       setCandidates(list);
-    } catch (err) { console.error("Failed to load voting data:", err); }
+    } catch (err) { console.error("Voting data error:", err); }
   }
 
   async function loadBudgetData(prov) {
@@ -106,8 +125,7 @@ export default function Voter() {
         const p = await contract.projects(i);
         const phases = await contract.getPhases(i);
         projList.push({
-          id: p.id.toString(), name: p.name,
-          contractor: p.contractor,
+          id: p.id.toString(), name: p.name, contractor: p.contractor,
           currentPhase: p.currentPhase.toString(),
           phaseNames: phases.names,
           phaseBudgets: phases.budgets.map(b => ethers.utils.formatEther(b)),
@@ -125,11 +143,11 @@ export default function Voter() {
         contractor: e.args.contractor,
         hash: e.transactionHash
       })).reverse());
-    } catch (err) { console.error("Failed to load budget data:", err); }
+    } catch (err) { console.error("Budget data error:", err); }
   }
 
-  function showStatus(msg, color = "#6366f1") {
-    setStatus(msg); setStatusColor(color);
+  function showStatus(msg, type = "info") {
+    setStatus(msg); setStatusType(type);
     setTimeout(() => setStatus(""), 4000);
   }
 
@@ -137,15 +155,15 @@ export default function Voter() {
     if (!startTime || !endTime) return { label: "Not Scheduled", color: "#475569" };
     const now = new Date();
     if (now < startTime) return { label: "Upcoming", color: "#f59e0b" };
-    if (now > endTime) return { label: "Ended", color: "#ef4444" };
-    return { label: "Live Now", color: "#22c55e" };
+    if (now > endTime)   return { label: "Ended",    color: "#ef4444" };
+    return { label: "Live", color: "#22c55e" };
   }
 
   async function uploadIdAndRegister() {
-    if (!idProofFile) { showStatus("Select an ID proof file first.", "#ef4444"); return; }
+    if (!idProofFile) { showStatus("Select an ID proof file first.", "error"); return; }
     try {
       setUploadingId(true);
-      showStatus("Uploading ID to IPFS...", "#f59e0b");
+      showStatus("Uploading ID to IPFS...", "warn");
       const formData = new FormData();
       formData.append("file", idProofFile);
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
@@ -154,41 +172,40 @@ export default function Voter() {
         body: formData,
       });
       const data = await res.json();
-      if (!data.IpfsHash) { showStatus("Upload failed.", "#ef4444"); return; }
+      if (!data.IpfsHash) { showStatus("Upload failed.", "error"); return; }
       setUploadingId(false);
       setRegistering(true);
-      showStatus("Submitting registration...", "#f59e0b");
+      showStatus("Submitting registration...", "warn");
       const contract = new ethers.Contract(VOTING_CONTRACT_ADDRESS, votingABI, signer);
       const tx = await contract.requestVoterRegistration(data.IpfsHash);
       await tx.wait();
-      showStatus("Registration submitted! Awaiting admin approval.");
+      showStatus("Registration submitted — awaiting admin approval.", "success");
       setVoterStatus(1);
       setIdProofFile(null);
     } catch (err) {
-      console.error(err); showStatus("Registration failed.", "#ef4444");
+      console.error(err);
+      showStatus("Registration failed.", "error");
     } finally { setUploadingId(false); setRegistering(false); }
   }
 
   async function castVote(candidateId) {
     try {
       setVoting(true);
-      showStatus("Waiting for MetaMask...", "#f59e0b");
+      showStatus("Waiting for MetaMask...", "warn");
       const contract = new ethers.Contract(VOTING_CONTRACT_ADDRESS, votingABI, signer);
       const tx = await contract.vote(candidateId);
-      showStatus("Transaction submitted...", "#f59e0b");
+      showStatus("Transaction submitted...", "warn");
       await tx.wait();
-      showStatus("Vote cast successfully!");
+      showStatus("Vote recorded on-chain!", "success");
       setHasVoted(true);
       await loadVotingData(provider, fullAddress);
     } catch (err) {
       console.error(err);
-      showStatus("Vote failed. " + (err.reason || ""), "#ef4444");
+      showStatus("Vote failed. " + (err.reason || ""), "error");
     } finally { setVoting(false); }
   }
 
   const electionStatus = getElectionStatus();
-  const statusLabels = ["Not Registered", "Pending Approval", "Approved", "Rejected"];
-  const statusColors = ["#475569", "#f59e0b", "#22c55e", "#ef4444"];
 
   if (loading) return (
     <div className="voter-loading">
@@ -198,75 +215,111 @@ export default function Voter() {
   );
 
   return (
-    <div className="voter-page">
-      {/* Header */}
-      <div className="voter-header">
-        <div className="voter-brand">
-          <div className="logo-mark" />
-          <span>CivicChain</span>
-        </div>
-        <div className="wallet-pill">
-          <span className="dot" style={{ background: statusColors[voterStatus] }} />
-          {walletAddress}
-          <span className="voter-status-tag" style={{
-            color: statusColors[voterStatus],
-            borderColor: statusColors[voterStatus] + "44",
-            background: statusColors[voterStatus] + "18"
-          }}>
-            {statusLabels[voterStatus]}
-          </span>
-        </div>
-      </div>
+    <div className="voter-shell">
 
-      {status && (
-        <div className="global-status" style={{ color: statusColor, borderColor: statusColor + "33", background: statusColor + "11" }}>
-          {status}
-        </div>
-      )}
+      {/* ── Sidebar ── */}
+      <aside className="voter-sidebar">
+        <div className="sidebar-top">
+          <div className="sidebar-logo">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L21 7V17L12 22L3 17V7L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+              <path d="M12 8L16 10.5V15.5L12 18L8 15.5V10.5L12 8Z" fill="currentColor" opacity="0.4"/>
+            </svg>
+          </div>
 
-      {/* Election status bar */}
-      <div className="election-bar">
-        <div className="election-bar-left">
-          <span className="election-indicator" style={{ background: electionStatus.color, boxShadow: `0 0 8px ${electionStatus.color}` }} />
-          <span className="election-label" style={{ color: electionStatus.color }}>{electionStatus.label}</span>
-          {startTime && endTime && (
-            <span className="election-time">{startTime.toLocaleString()} → {endTime.toLocaleString()}</span>
-          )}
+          {/* Election status */}
+          <div className="sidebar-election-card">
+            <div className="sec-row">
+              <span className="sec-dot" style={{ background: electionStatus.color, boxShadow: `0 0 6px ${electionStatus.color}` }} />
+              <span className="sec-label" style={{ color: electionStatus.color }}>{electionStatus.label}</span>
+            </div>
+            {startTime && (
+              <div className="sec-time">{startTime.toLocaleDateString()}</div>
+            )}
+            {endTime && (
+              <div className="sec-time">→ {endTime.toLocaleDateString()}</div>
+            )}
+          </div>
+
+          {/* Voter status */}
+          <div className="sidebar-status-card">
+            <div className="ssc-label">Your Status</div>
+            <div className="ssc-value" style={{ color: STATUS_COLORS[voterStatus] }}>
+              {STATUS_LABELS[voterStatus]}
+            </div>
+          </div>
+
+          <nav className="sidebar-nav">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                className={`sidebar-tab ${activeTab === tab.id ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span className="stab-icon">{tab.icon}</span>
+                <span className="stab-label">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
         </div>
-        {resultsDeclared && winner && (
-          <div className="winner-pill">
-            🏆 Winner: <strong>{winner.name}</strong> · {winner.voteCount} votes
+
+        <div className="sidebar-footer">
+          <div className="wallet-info">
+            <span className="wallet-dot" style={{ background: STATUS_COLORS[voterStatus] }} />
+            <span className="wallet-addr">{walletAddress}</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <main className="voter-main">
+
+        {status && (
+          <div className={`status-toast status-${statusType}`}>
+            {statusType === "success" && "✓ "}{statusType === "error" && "✕ "}{statusType === "warn" && "⏳ "}
+            {status}
           </div>
         )}
-      </div>
 
-      {/* Tabs */}
-      <div className="voter-tabs">
-        <button className={`tab-btn ${activeTab === "vote" ? "active" : ""}`} onClick={() => setActiveTab("vote")}>
-          Cast Vote
-        </button>
-        <button className={`tab-btn ${activeTab === "budget" ? "active" : ""}`} onClick={() => setActiveTab("budget")}>
-          Budget Tracker
-        </button>
-      </div>
+        {/* Winner banner */}
+        {resultsDeclared && winner && (
+          <div className="winner-banner">
+            <span className="winner-trophy">🏆</span>
+            <div>
+              <div className="winner-label">Election Winner</div>
+              <div className="winner-name">{winner.name}</div>
+            </div>
+            <div className="winner-votes">{winner.voteCount} votes</div>
+          </div>
+        )}
 
-      <div className="voter-content">
-
+        {/* ── VOTE TAB ── */}
         {activeTab === "vote" && (
-          <div>
-            {/* Registration states */}
+          <div className="tab-content">
+            <div className="tab-header">
+              <h1>{hasVoted ? "Your Vote" : "Cast Your Vote"}</h1>
+              <p>
+                {voterStatus === 0 && "Register to participate in this election."}
+                {voterStatus === 1 && "Your registration is pending admin approval."}
+                {voterStatus === 2 && !hasVoted && "Select a candidate and cast your vote."}
+                {voterStatus === 2 && hasVoted && "Your vote has been permanently recorded on-chain."}
+                {voterStatus === 3 && "Your registration was rejected. Contact the admin."}
+              </p>
+            </div>
+
+            {/* Registration */}
             {voterStatus === 0 && (
-              <div className="info-card register-card">
-                <div className="info-card-icon">🪪</div>
-                <div className="info-card-body">
+              <div className="info-panel register-panel">
+                <div className="ip-icon">🪪</div>
+                <div className="ip-body">
                   <h3>Register to Vote</h3>
                   <p>Upload your government ID proof. An admin will verify and approve your registration.</p>
-                  <div className="file-upload-row">
+                  <div className="file-row">
                     <label className="file-label">
-                      <input type="file" accept="image/*,.pdf" onChange={e => setIdProofFile(e.target.files[0])} className="file-input-hidden" />
-                      <span className="file-btn">{idProofFile ? idProofFile.name : "Choose ID File"}</span>
+                      <input type="file" accept="image/*,.pdf" onChange={e => setIdProofFile(e.target.files[0])} className="file-hidden" />
+                      <span className="file-pill">{idProofFile ? idProofFile.name : "Choose ID File"}</span>
                     </label>
-                    <button onClick={uploadIdAndRegister} disabled={uploadingId || registering || !idProofFile} className="register-btn">
+                    <button onClick={uploadIdAndRegister} disabled={uploadingId || registering || !idProofFile} className="btn btn-primary">
                       {uploadingId ? "Uploading..." : registering ? "Registering..." : "Submit"}
                     </button>
                   </div>
@@ -275,9 +328,9 @@ export default function Voter() {
             )}
 
             {voterStatus === 1 && (
-              <div className="info-card pending-card">
-                <div className="info-card-icon">⏳</div>
-                <div className="info-card-body">
+              <div className="info-panel pending-panel">
+                <div className="ip-icon">⏳</div>
+                <div className="ip-body">
                   <h3>Registration Pending</h3>
                   <p>Your ID has been submitted. An admin is reviewing your application — check back soon.</p>
                 </div>
@@ -285,51 +338,51 @@ export default function Voter() {
             )}
 
             {voterStatus === 3 && (
-              <div className="info-card rejected-card">
-                <div className="info-card-icon">✕</div>
-                <div className="info-card-body">
+              <div className="info-panel rejected-panel">
+                <div className="ip-icon">✕</div>
+                <div className="ip-body">
                   <h3>Registration Rejected</h3>
-                  <p>Your voter registration was rejected. Please contact the election admin.</p>
+                  <p>Your registration was rejected. Please contact the election admin.</p>
                 </div>
               </div>
             )}
 
             {hasVoted && (
-              <div className="info-card voted-card">
-                <div className="info-card-icon">✓</div>
-                <div className="info-card-body">
+              <div className="info-panel voted-panel">
+                <div className="ip-icon">✓</div>
+                <div className="ip-body">
                   <h3>Vote Recorded</h3>
-                  <p>Your vote has been permanently recorded on the blockchain. Results are shown below.</p>
+                  <p>Your vote has been permanently recorded on the blockchain.</p>
                 </div>
               </div>
             )}
 
             {/* Candidates */}
             {candidates.length === 0 ? (
-              <div className="empty-state">No candidates added yet. Check back soon.</div>
+              <div className="empty-state">No candidates added yet — check back soon.</div>
             ) : (
               <div className="candidates-grid">
                 {candidates.map(c => (
-                  <div key={c.id} className={`candidate-card ${hasVoted ? "has-voted" : ""}`}>
-                    <div className="candidate-photo-wrap">
+                  <div key={c.id} className={`cand-card ${hasVoted ? "voted-state" : ""}`}>
+                    <div className="cand-photo">
                       <img
                         src={c.photoCID.startsWith("http") ? c.photoCID : `https://gateway.pinata.cloud/ipfs/${c.photoCID}`}
                         alt={c.name}
-                        onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${c.name}&background=6366f1&color=fff&size=100`; }}
+                        onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=6c63ff&color=fff&size=100`; }}
                       />
                     </div>
-                    <div className="candidate-info">
-                      <h3>{c.name}</h3>
-                      <div className="vote-stats">
+                    <div className="cand-info">
+                      <h3 className="cand-name">{c.name}</h3>
+                      <div className="cand-stats">
                         <span>{c.voteCount} votes</span>
-                        <span className="pct">{c.percentage}%</span>
+                        <span className="cand-pct">{c.percentage}%</span>
                       </div>
-                      <div className="vote-bar-track">
+                      <div className="vote-bar">
                         <div className="vote-bar-fill" style={{ width: `${c.percentage}%` }} />
                       </div>
                     </div>
                     <button
-                      className={`vote-btn ${hasVoted ? "voted" : ""} ${voterStatus !== 2 ? "disabled" : ""}`}
+                      className={`vote-btn ${hasVoted ? "btn-voted" : voterStatus !== 2 ? "btn-locked" : "btn-castable"}`}
                       onClick={() => castVote(c.id)}
                       disabled={voting || hasVoted || voterStatus !== 2}
                     >
@@ -342,21 +395,26 @@ export default function Voter() {
           </div>
         )}
 
+        {/* ── BUDGET TAB ── */}
         {activeTab === "budget" && (
-          <div>
-            {/* Stats */}
-            <div className="budget-stats-row">
-              <div className="budget-stat-card">
-                <div className="bsc-label">Contract Balance</div>
-                <div className="bsc-value">{parseFloat(budgetBalance).toFixed(4)} <span>ETH</span></div>
+          <div className="tab-content">
+            <div className="tab-header">
+              <h1>Budget Tracker</h1>
+              <p>Transparent on-chain fund management — every release is publicly auditable.</p>
+            </div>
+
+            <div className="budget-stat-row">
+              <div className="bstat">
+                <div className="bstat-label">Contract Balance</div>
+                <div className="bstat-value">{parseFloat(budgetBalance).toFixed(4)} <span>ETH</span></div>
               </div>
-              <div className="budget-stat-card">
-                <div className="bsc-label">Total Projects</div>
-                <div className="bsc-value">{projects.length}</div>
+              <div className="bstat">
+                <div className="bstat-label">Total Projects</div>
+                <div className="bstat-value">{projects.length}</div>
               </div>
-              <div className="budget-stat-card">
-                <div className="bsc-label">Phases Released</div>
-                <div className="bsc-value">{phaseEvents.length}</div>
+              <div className="bstat">
+                <div className="bstat-label">Phases Released</div>
+                <div className="bstat-value">{phaseEvents.length}</div>
               </div>
             </div>
 
@@ -365,30 +423,30 @@ export default function Voter() {
             ) : (
               projects.map(p => (
                 <div key={p.id} className="project-card">
-                  <div className="project-header">
+                  <div className="proj-header">
                     <div>
-                      <h3 className="project-name">{p.name}</h3>
-                      <p className="project-contractor">
+                      <h3 className="proj-name">{p.name}</h3>
+                      <p className="proj-contractor">
                         Contractor: <code>{p.contractor.slice(0, 8)}...{p.contractor.slice(-6)}</code>
                       </p>
                     </div>
-                    <span className="project-phase-badge">Phase {p.currentPhase}</span>
+                    <span className="proj-phase-badge">Phase {p.currentPhase}</span>
                   </div>
                   <div className="phases-list">
                     {p.phaseNames.map((name, i) => (
-                      <div key={i} className={`phase-row ${p.statuses[i] === 2 ? "released" : p.statuses[i] === 1 ? "submitted" : ""}`}>
-                        <div className="phase-left">
-                          <span className={`phase-dot ${p.statuses[i] === 2 ? "green" : p.statuses[i] === 1 ? "yellow" : "grey"}`} />
-                          <span className="phase-name">{name}</span>
+                      <div key={i} className={`phase-row ${p.statuses[i] === 2 ? "ph-released" : p.statuses[i] === 1 ? "ph-submitted" : ""}`}>
+                        <div className="phase-l">
+                          <span className={`phase-dot ${p.statuses[i] === 2 ? "pd-green" : p.statuses[i] === 1 ? "pd-yellow" : "pd-grey"}`} />
+                          <span>{name}</span>
                         </div>
-                        <div className="phase-right">
+                        <div className="phase-r">
                           <span className="phase-budget">{p.phaseBudgets[i]} ETH</span>
-                          <span className={`phase-status ${p.statuses[i] === 2 ? "s-released" : p.statuses[i] === 1 ? "s-submitted" : "s-pending"}`}>
+                          <span className={`phase-status ps-${p.statuses[i]}`}>
                             {p.statuses[i] === 0 ? "Pending" : p.statuses[i] === 1 ? "Proof Submitted" : "Released"}
                           </span>
                           {p.evidenceCIDs[i] && (
                             <a href={`https://gateway.pinata.cloud/ipfs/${p.evidenceCIDs[i]}`} target="_blank" rel="noreferrer" className="proof-link">
-                              View Proof ↗
+                              Proof ↗
                             </a>
                           )}
                         </div>
@@ -401,13 +459,13 @@ export default function Voter() {
 
             {phaseEvents.length > 0 && (
               <div className="release-history">
-                <h3 className="section-title">Release History</h3>
+                <h2 className="section-title">Release History</h2>
                 {phaseEvents.map((e, i) => (
-                  <div key={i} className="release-item">
-                    <div className="release-icon">↑</div>
-                    <div className="release-details">
+                  <div key={i} className="release-row">
+                    <div className="release-icon-wrap">↑</div>
+                    <div className="release-info">
                       <span className="release-title">Project #{e.projectId} — Phase {e.phaseIndex}</span>
-                      <span className="release-sub">{e.amount} ETH → {e.contractor.slice(0, 6)}...{e.contractor.slice(-4)}</span>
+                      <span className="release-sub">{e.amount} ETH → {e.contractor.slice(0,6)}...{e.contractor.slice(-4)}</span>
                     </div>
                     <a href={`https://sepolia.etherscan.io/tx/${e.hash}`} target="_blank" rel="noreferrer" className="tx-link">Tx ↗</a>
                   </div>
@@ -416,7 +474,8 @@ export default function Voter() {
             )}
           </div>
         )}
-      </div>
+
+      </main>
     </div>
   );
 }
