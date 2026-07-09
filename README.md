@@ -1,134 +1,110 @@
-# 🗳️ Decentralized Voting & Budget Tracker
+# Decentralized Voting & Budget Tracking System
 
-![Project Banner](assets/banner.png)
+A fully on-chain voting and budget tracking dApp built on Ethereum Sepolia Testnet. The system is designed for transparent election handling, voter verification, project budget tracking, and controlled fund release through admin approval.
 
-## 🌟 Overview
+The app uses MetaMask for wallet login, IPFS for document/proof storage, and smart contracts for recording votes, approvals, budget releases, and governance actions on-chain.
 
-The **Decentralized Voting & Budget Tracker** is a robust Web3 application designed to bring transparency, security, and accountability to community governance and financial management. Built on the Ethereum blockchain, this system ensures that every vote is tamper-proof and every penny spent is accounted for through phase-gated funding.
+## Live Deployment
 
----
+[decentralized-voting-budget-trackin.vercel.app](https://decentralized-voting-budget-trackin.vercel.app/)
 
-## 🚀 Key Features
+## About the Project
 
-### 1. Decentralized Voting System
-- **Transparent Elections**: All votes are recorded on-chain, ensuring immutability and public verifiability.
-- **Voter Verification**: Admin-controlled registration process to prevent Sybil attacks and ensure only verified citizens can vote.
-- **Candidate Management**: Dynamic addition of candidates with photo support (via IPFS).
-- **Automated Results**: Smart contract logic handle vote counting and winner declaration once the election ends.
+This project combines decentralized voting with budget monitoring. Voters can register, upload ID proof, get approved by admins, and cast votes directly through the blockchain. Along with voting, the system also tracks public project budgets, phase-wise fund allocation, contractor proof submission, and fund release history.
 
-### 2. Smart Budget Tracking
-- **Phase-Gated Funding**: Projects are broken down into milestones. Funds are only released when milestones are met.
-- **Proof of Work**: Contractors must submit evidence (IPFS CIDs of receipts, photos, or documents) to claim funding.
-- **Real-time Balance**: Transparent view of public funds and contract balances.
-- **Transaction History**: Complete immutable log of all incoming deposits and outgoing releases.
+Admin access is restricted to the existing admin wallet IDs already configured in the project/smart contract. Any wallet that is not part of the admin list will be treated as a voter.
 
----
+The goal of the project is to make voting and budget-related decisions more transparent, traceable, and resistant to tampering.
 
-## 🛠️ Tech Stack
+## Project Outcomes
 
-- **Frontend**: React.js, Vite, Framer Motion (Aesthetics), React Router DOM
-- **Blockchain Interaction**: Ethers.js (v5.7.2)
-- **Smart Contracts**: Solidity (^0.8.0)
-- **Development Environment**: Hardhat
-- **Storage**: IPFS (for candidate photos and project evidence)
+This project delivers:
 
----
+- A deployed blockchain-based voting and budget tracking dApp
+- MetaMask wallet-based login
+- Separate dashboards for admins and voters
+- Voter registration with ID proof upload to IPFS
+- Admin approval or rejection of voter requests
+- On-chain candidate and election management
+- Single-vote enforcement for approved voters
+- Public result visibility after election completion
+- Budget project creation with phase-wise ETH allocation
+- Contractor proof submission using IPFS
+- On-chain fund release tracking
+- 2-of-3 admin multi-sig approval for critical actions
+- Timelock protection before executing sensitive admin actions
+- Smart contract deployment on Sepolia Testnet
 
-## 💻 Getting Started
+## Features
 
-### Prerequisites
+### Voting
 
-- **Node.js**: v16.x or higher
-- **MetaMask**: Browser extension for wallet management
-- **Git**: To clone the repository
+- Voter registration with IPFS ID proof upload
+- Admin approval and rejection of voter requests
+- Candidate management through multi-sig approval
+- Election start and end time stored on-chain
+- One vote per approved wallet
+- Vote records stored permanently on-chain
+- Election results declared after the voting period ends
 
-### 1. Backend Setup (Smart Contracts)
+### Budget Tracking
 
-Navigate to the backend directory and install dependencies:
+- Admins can create budget projects
+- Projects can be divided into multiple phases
+- ETH is locked in the contract for each phase
+- Contractors can submit completion proof through IPFS
+- Admins can verify work and release funds
+- Fund release history is visible on-chain
+- Reentrancy protection for ETH transfers
 
-```bash
-cd backend
-npm install
-```
+### Governance
 
-Start a local Hardhat node:
+- Critical actions use a 2-of-3 admin multi-sig flow
+- At least 2 out of 3 admins must approve before execution
+- A timelock is applied before execution
+- Actions are tracked using a shared `bytes32` action key
+- Admin wallets are predefined and cannot be created from the app
 
-```bash
-npx hardhat node
-```
+## How to Use the Deployed App
 
-In a **new terminal**, deploy the smart contracts to the local network:
+Open the app:
 
-```bash
-# Deploy Voting Contract
-npx hardhat run scripts/deploy.js --network localhost
+[https://decentralized-voting-budget-trackin.vercel.app/](https://decentralized-voting-budget-trackin.vercel.app/)
 
-# Deploy Budget Contract
-npx hardhat run scripts/deployBudget.js --network localhost
-```
+## Requirements
 
-> [!TIP]
-> Note down the contract addresses printed in the console. You will need them for the frontend configuration.
+Before using the app, make sure you have:
 
-### 2. Frontend Setup
+- Chrome, Brave, Edge, or Firefox
+- MetaMask browser extension
+- A MetaMask wallet account
+- Sepolia Testnet selected in MetaMask
+- Some Sepolia ETH for gas fees
 
-Navigate to the frontend directory and install dependencies:
+## Step 1: Install MetaMask
 
-```bash
-cd FRONTEND
-npm install
-```
+1. Go to [https://metamask.io](https://metamask.io)
+2. Download and install the browser extension.
+3. Create a new wallet or import an existing wallet.
+4. Set a strong password.
+5. Save your Secret Recovery Phrase safely.
 
-**Configure Contract Addresses:**
-Open `FRONTEND/src/contracts/contractConfig.js` and update the addresses with the ones from the deployment step:
+Never share your Secret Recovery Phrase with anyone.
 
-```javascript
-export const VOTING_CONTRACT_ADDRESS = "YOUR_VOTING_ADDRESS_HERE";
-export const BUDGET_CONTRACT_ADDRESS = "YOUR_BUDGET_ADDRESS_HERE";
-```
+## Step 2: Switch to Sepolia Testnet
 
-Start the development server:
+This project runs on Sepolia Testnet.
 
-```bash
-npm run dev
-```
+1. Open MetaMask.
+2. Click the network dropdown at the top.
+3. Enable test networks if Sepolia is not visible.
+4. Select `Sepolia`.
 
-The app should now be running at `http://localhost:5173`.
+If Sepolia is not listed, add it manually:
 
----
-
-## 🦊 MetaMask Configuration
-
-To interact with the local blockchain:
-1. Open MetaMask and add a **New Network**.
-2. **Network Name**: Hardhat Local
-3. **RPC URL**: `http://127.0.0.1:8545`
-4. **Chain ID**: `31337`
-5. **Currency Symbol**: `ETH`
-6. **Import Accounts**: Copy private keys from the `hardhat node` console to import test accounts with 10,000 ETH.
-
----
-
-## 🏗️ Project Structure
-
-```text
-├── FRONTEND/              # React application
-│   ├── src/
-│   │   ├── components/    # Reusable UI components
-│   │   ├── pages/         # Main views (Landing, Voting, Budget)
-│   │   ├── contracts/     # ABIs and Config
-│   │   └── styles/        # CSS Modules
-├── backend/               # Hardhat project
-│   ├── contracts/         # Solidity smart contracts
-│   ├── scripts/           # Deployment scripts
-│   └── test/              # Contract unit tests
-└── assets/                # Design assets and images
-```
-
----
-
-## 🛡️ License
-
-Distributed under the ISC License. See `LICENSE` for more information.
-
----
+```txt
+Network Name: Sepolia
+RPC URL: https://rpc.sepolia.org
+Chain ID: 11155111
+Currency Symbol: ETH
+Block Explorer: https://sepolia.etherscan.io
